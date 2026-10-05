@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: viva-control-plane
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/viva_proctoring}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 25
+
+app:
+  go-router:
+    url: ${GO_ROUTER_URL:http://localhost:8082}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 15000
+  python-ai:
+    vision-url: ${AI_VISION_URL:http://localhost:5001}
+    speech-url: ${AI_SPEECH_URL:http://localhost:5002}
+    evaluation-url: ${AI_EVALUATION_URL:http://localhost:5003}
+    communication-url: ${AI_COMMUNICATION_URL:http://localhost:5004}
+    followup-url: ${AI_FOLLOWUP_URL:http://localhost:5005}
+    stub-enabled: ${PYTHON_STUB_ENABLED:true} # Clean stub enabled if Python services are not running
+  evidence:
+    storage-path: ${EVIDENCE_STORAGE_PATH:./data/evidence}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.airouteviva: INFO
