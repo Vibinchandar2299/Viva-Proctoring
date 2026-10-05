@@ -1,0 +1,12 @@
+package com.airouteviva.entity.enums;
+
+public enum WorkloadType {
+    IDENTITY_VERIFICATION,
+    FACE_DETECTION,
+    MULTIPLE_FACE_DETECTION,
+    OBJECT_DETECTION,
+    SPEECH_TO_TEXT,
+    ANSWER_EVALUATION,
+    COMMUNICATION_ANALYSIS,
+    FOLLOW_UP_GENERATION
+}
