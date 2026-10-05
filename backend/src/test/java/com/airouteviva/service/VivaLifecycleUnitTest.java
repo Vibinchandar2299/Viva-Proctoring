@@ -5,6 +5,7 @@ import com.airouteviva.client.GoRouterClient;
 import com.airouteviva.client.dto.*;
 import com.airouteviva.dto.request.*;
 import com.airouteviva.dto.response.*;
+import com.airouteviva.entity.*;
 import com.airouteviva.entity.enums.*;
 import com.airouteviva.exception.DuplicateResourceException;
 import com.airouteviva.exception.InvalidSessionStateException;
