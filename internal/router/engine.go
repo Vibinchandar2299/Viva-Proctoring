@@ -286,7 +286,7 @@ func (e *Engine) CompareWithBaseline(ctx context.Context, req *RouteRequest, fix
 	eval := e.feasFilter.Evaluate(req.WorkloadType, req.Payload, resState)
 
 	baselineSuccess := true
-	baselineReason := ""
+	baselineFailureReason := ""
 	baselineLatency := 0.0
 	baselineCost := 0.0
 

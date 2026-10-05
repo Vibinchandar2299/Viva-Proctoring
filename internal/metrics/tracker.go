@@ -3,7 +3,6 @@ package metrics
 import (
 	"math"
 	"sync"
-	"time"
 
 	"github.com/Vibinchandar2299/Viva-Proctoring/internal/config"
 	"github.com/Vibinchandar2299/Viva-Proctoring/internal/paths"
