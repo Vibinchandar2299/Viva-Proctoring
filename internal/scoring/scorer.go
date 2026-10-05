@@ -10,12 +10,12 @@ import (
 
 // ScoreBreakdown details the components of a path's final score
 type ScoreBreakdown struct {
-	TotalScore       float64 `json:"totalScore"`
-	ResourceScore    float64 `json:"resourceScore"`
-	LatencyScore     float64 `json:"latencyScore"`
-	CostScore        float64 `json:"costScore"`
-	CapabilityScore  float64 `json:"capabilityScore"`
-	PriorityFitScore float64 `json:"priorityFitScore"`
+	TotalScore       float64               `json:"totalScore"`
+	ResourceScore    float64               `json:"resourceScore"`
+	LatencyScore     float64               `json:"latencyScore"`
+	CostScore        float64               `json:"costScore"`
+	CapabilityScore  float64               `json:"capabilityScore"`
+	PriorityFitScore float64               `json:"priorityFitScore"`
 	AppliedWeights   config.ScoringWeights `json:"appliedWeights"`
 }
 
@@ -89,30 +89,29 @@ func (s *Scorer) ScorePaths(
 }
 
 func (s *Scorer) computeDynamicWeights(priority config.PriorityLevel, complexity config.ComplexityLevel) config.ScoringWeights {
-	w := s.cfg.Weights
-
-	switch priority {
-	case config.PriorityHigh:
-		// Real-time viva proctoring requires low latency
-		w.WeightLatency += 0.12
-		w.WeightResource += 0.03
-		w.WeightCost -= 0.10
-		w.WeightPriority += 0.05
-		w.WeightCapability -= 0.10
-
-	case config.PriorityLow:
-		// Non-critical background task; prioritize cost and resource conservation
-		w.WeightLatency -= 0.15
-		w.WeightCost += 0.15
-		w.WeightResource += 0.10
-		w.WeightPriority -= 0.05
-		w.WeightCapability -= 0.05
+	w := config.ScoringWeights{
+		WeightResource:   0.25,
+		WeightLatency:    0.25,
+		WeightCost:       0.15,
+		WeightCapability: 0.25,
+		WeightPriority:   0.10,
 	}
 
 	if complexity == config.ComplexityHigh {
 		w.WeightCapability += 0.15
 		w.WeightLatency -= 0.05
-		w.WeightCost -= 0.10
+		w.WeightCost -= 0.05
+		w.WeightResource -= 0.05
+	}
+
+	switch priority {
+	case config.PriorityHigh:
+		w.WeightLatency += 0.08
+		w.WeightCost -= 0.08
+	case config.PriorityLow:
+		w.WeightCost += 0.15
+		w.WeightLatency -= 0.10
+		w.WeightPriority -= 0.05
 	}
 
 	// Normalize sum of weights to 1.0
@@ -134,33 +133,36 @@ func (s *Scorer) calculateResourceScore(
 	resState resources.ResourceState,
 ) float64 {
 	switch pathType {
-	case config.PathLightweightLocal:
-		// Highly resilient to resource strain
-		if resState.RAMPressure == resources.PressureHigh {
-			return 85.0
-		}
-		return 95.0
-
 	case config.PathHigherCapabilityLocal:
-		// Excellent when host has plenty of headroom, lower when approaching boundaries
+		// When host has plenty of headroom, full local model is the primary choice
 		if resState.RAMPressure == resources.PressureLow && resState.CPUPressure == resources.PressureLow {
+			return 100.0
+		}
+		if resState.RAMPressure == resources.PressureMedium {
+			return 65.0
+		}
+		return 30.0
+
+	case config.PathLightweightLocal:
+		// Highly resilient under memory strain
+		if resState.RAMPressure == resources.PressureHigh {
 			return 95.0
 		}
 		if resState.RAMPressure == resources.PressureMedium {
-			return 70.0
+			return 92.0
 		}
-		return 40.0
+		return 85.0
 
 	case config.PathSimulatedCloud:
-		// Consumes virtually zero local RAM/CPU
+		// Offloads CPU/RAM to remote worker
 		return 90.0
 
 	case config.PathOfflineFallback:
-		// Extremely low footprint
-		return 98.0
+		// Ultra low footprint emergency fallback
+		return 70.0
 
 	default:
-		return 75.0
+		return 70.0
 	}
 }
 
@@ -170,19 +172,19 @@ func (s *Scorer) calculateLatencyScore(
 	resState resources.ResourceState,
 ) float64 {
 	switch pathType {
-	case config.PathOfflineFallback:
-		return 95.0 // ~15ms
 	case config.PathLightweightLocal:
-		return 85.0 // ~85ms
+		return 88.0 // ~85ms
 	case config.PathHigherCapabilityLocal:
-		return 60.0 // ~320ms
+		return 78.0 // ~320ms (well within viva latency budgets)
 	case config.PathSimulatedCloud:
 		if resState.NetworkStatus == config.NetworkGood {
-			return 70.0
+			return 68.0
 		} else if resState.NetworkStatus == config.NetworkDegraded {
-			return 45.0
+			return 40.0
 		}
-		return 20.0
+		return 15.0
+	case config.PathOfflineFallback:
+		return 65.0 // Fallback heuristic
 	default:
 		return 50.0
 	}
@@ -192,8 +194,8 @@ func (s *Scorer) calculateCostScore(pathType config.ExecutionPathType, profile p
 	if profile.EstimatedCost <= 0.0 {
 		return 100.0 // Free local processing
 	}
-	// Simulated cloud costs money
-	return 50.0
+	// Simulated cloud incurs quota/cost penalty
+	return 40.0
 }
 
 func (s *Scorer) calculateCapabilityScore(
@@ -205,23 +207,33 @@ func (s *Scorer) calculateCapabilityScore(
 
 	switch complexity {
 	case config.ComplexityHigh:
-		// High complexity demands strong models
-		if pathType == config.PathHigherCapabilityLocal || pathType == config.PathSimulatedCloud {
-			return math.Min(100.0, base+5.0)
+		if pathType == config.PathHigherCapabilityLocal {
+			return 100.0 // Heavy model delivers necessary depth
+		}
+		if pathType == config.PathSimulatedCloud {
+			return 95.0
+		}
+		if pathType == config.PathLightweightLocal {
+			return 65.0 // Quantized model struggles with deep nuance
 		}
 		if pathType == config.PathOfflineFallback {
-			return math.Max(20.0, base-20.0) // Penalize fallback heavily on high complexity
+			return 25.0 // Fallback has poor accuracy on complex tasks
 		}
-		return base - 5.0
+		return base
 
 	case config.ComplexityLow:
-		// Low complexity can be satisfied perfectly by lightweight local
 		if pathType == config.PathLightweightLocal {
-			return 95.0
+			return 96.0 // Ideal fit for low complexity
 		}
 		return base
 
 	default: // MEDIUM
+		if pathType == config.PathLightweightLocal {
+			return 85.0
+		}
+		if pathType == config.PathHigherCapabilityLocal {
+			return 95.0
+		}
 		return base
 	}
 }
@@ -233,23 +245,33 @@ func (s *Scorer) calculatePriorityFitScore(
 ) float64 {
 	switch priority {
 	case config.PriorityHigh:
-		// Real-time demands speed and deterministic execution
 		if pathType == config.PathLightweightLocal {
-			return 95.0
+			return 96.0
 		}
 		if pathType == config.PathHigherCapabilityLocal {
+			return 90.0
+		}
+		if pathType == config.PathSimulatedCloud {
+			return 60.0
+		}
+		return 35.0 // OFFLINE_FALLBACK is emergency only
+
+	case config.PriorityLow:
+		if pathType == config.PathLightweightLocal {
 			return 85.0
 		}
 		if pathType == config.PathSimulatedCloud {
-			return 65.0 // Network jitter hazard
+			return 80.0
 		}
-		return 70.0
-
-	case config.PriorityLow:
-		// Low priority can run anywhere, prefer lightweight or cloud
-		return 80.0
+		return 40.0
 
 	default: // MEDIUM
-		return 85.0
+		if pathType == config.PathHigherCapabilityLocal {
+			return 90.0
+		}
+		if pathType == config.PathLightweightLocal {
+			return 88.0
+		}
+		return 35.0
 	}
 }
