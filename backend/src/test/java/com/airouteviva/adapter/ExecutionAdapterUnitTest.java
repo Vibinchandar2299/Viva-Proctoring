@@ -1,7 +1,7 @@
 package com.airouteviva.adapter;
 
 import com.airouteviva.client.python.PythonAIClient;
-import com.airouteviva.client.python.dto.VisionAnalyzeResponse;
+import com.airouteviva.client.python.dto.VisionAnalysisResponse;
 import com.airouteviva.entity.enums.ExecutionPath;
 import com.airouteviva.entity.enums.WorkloadType;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -53,19 +52,18 @@ class ExecutionAdapterUnitTest {
 
     @Test
     void testLightweightLocalAdapter_VisionExecution() {
-        VisionAnalyzeResponse mockVision = new VisionAnalyzeResponse();
-        mockVision.setFacesDetected(1);
-        mockVision.setMultipleFaces(false);
-        mockVision.setUnauthorizedObject(false);
+        VisionAnalysisResponse mockVision = new VisionAnalysisResponse();
+        mockVision.setFaceCount(1);
+        mockVision.setVerified(true);
         mockVision.setConfidence(0.95);
-        mockVision.setDetails("1 face detected");
+        mockVision.setStatus("SUCCESS");
 
         when(pythonAIClient.analyzeVision(any(), any())).thenReturn(mockVision);
 
         Object result = dispatcher.dispatch(ExecutionPath.LIGHTWEIGHT_LOCAL, WorkloadType.FACE_DETECTION, Map.of());
         assertNotNull(result);
-        assertTrue(result instanceof VisionAnalyzeResponse);
-        assertEquals(1, ((VisionAnalyzeResponse) result).getFacesDetected());
+        assertTrue(result instanceof VisionAnalysisResponse);
+        assertEquals(1, ((VisionAnalysisResponse) result).getFaceCount());
     }
 
     @Test
@@ -84,7 +82,7 @@ class ExecutionAdapterUnitTest {
         assertNotNull(result);
         assertTrue(result instanceof Map);
         Map<?, ?> map = (Map<?, ?>) result;
-        assertEquals("SIMULATED_CLOUD_BENCHMARK_COMPLETE", map.get("status"));
+        assertEquals("COMPLETED_SIMULATED_CLOUD", map.get("status"));
     }
 
     @Test
@@ -93,6 +91,6 @@ class ExecutionAdapterUnitTest {
         assertNotNull(result);
         assertTrue(result instanceof Map);
         Map<?, ?> map = (Map<?, ?>) result;
-        assertEquals("OFFLINE_FALLBACK_EXECUTED", map.get("status"));
+        assertEquals("COMPLETED_OFFLINE_FALLBACK", map.get("status"));
     }
 }

@@ -9,3 +9,15 @@ bin/
 # Test artifacts
 *.test
 *.out
+
+# Maven build artifacts
+backend/target/
+target/
+
+# Local data & evidence
+data/
+*.log
+
+# IDE
+.idea/
+*.iml

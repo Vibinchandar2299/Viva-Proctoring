@@ -11,6 +11,7 @@ import com.airouteviva.entity.enums.WorkloadType;
 import com.airouteviva.exception.ResourceNotFoundException;
 import com.airouteviva.repository.EvidenceRepository;
 import com.airouteviva.repository.ProctoringEventRepository;
+import com.airouteviva.repository.VivaSessionRepository;
 import com.airouteviva.websocket.VivaEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class ProctoringService {
 
     private final ProctoringEventRepository eventRepository;
     private final EvidenceRepository evidenceRepository;
+    private final VivaSessionRepository sessionRepository;
     private final AIOrchestrationService aiOrchestrationService;
     private final VivaEventPublisher eventPublisher;
     private final String evidenceStoragePath;
@@ -45,12 +47,14 @@ public class ProctoringService {
     public ProctoringService(
             ProctoringEventRepository eventRepository,
             EvidenceRepository evidenceRepository,
+            VivaSessionRepository sessionRepository,
             AIOrchestrationService aiOrchestrationService,
             VivaEventPublisher eventPublisher,
             @Value("${app.evidence.storage-path:./data/evidence}") String evidenceStoragePath
     ) {
         this.eventRepository = eventRepository;
         this.evidenceRepository = evidenceRepository;
+        this.sessionRepository = sessionRepository;
         this.aiOrchestrationService = aiOrchestrationService;
         this.eventPublisher = eventPublisher;
         this.evidenceStoragePath = evidenceStoragePath;
@@ -132,6 +136,9 @@ public class ProctoringService {
 
     @Transactional(readOnly = true)
     public List<ProctoringEventResponse> getEventsForSession(String sessionId) {
+        if (!sessionRepository.existsBySessionId(sessionId)) {
+            throw new ResourceNotFoundException("Session not found: " + sessionId);
+        }
         return eventRepository.findBySessionIdOrderByTimestampAsc(sessionId).stream()
                 .map(this::mapToResponse)
                 .toList();

@@ -110,8 +110,9 @@ class VivaValidationAndErrorUnitTest {
         );
 
         assertNotNull(result);
-        assertNotNull(result.getRequestId());
-        assertEquals("LIGHTWEIGHT_LOCAL", result.getRoutingDecision().getSelectedPath());
+        assertNotNull(result.getAiRequest());
+        assertNotNull(result.getAiRequest().getRequestId());
+        assertEquals(ExecutionPath.LIGHTWEIGHT_LOCAL, result.getRoutingDecision().getSelectedPath());
 
         // Verify WebSocket event was published
         verify(eventPublisher, atLeastOnce()).publish(any());

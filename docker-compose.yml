@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: viva-postgres
+    environment:
+      POSTGRES_DB: viva_proctoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d viva_proctoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  spring-boot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: viva-control-plane
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/viva_proctoring
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      GO_ROUTER_URL: http://host.docker.internal:8082
+      AI_VISION_URL: http://host.docker.internal:5001
+      AI_SPEECH_URL: http://host.docker.internal:5002
+      AI_EVALUATION_URL: http://host.docker.internal:5003
+      AI_COMMUNICATION_URL: http://host.docker.internal:5004
+      AI_FOLLOWUP_URL: http://host.docker.internal:5005
+      PYTHON_STUB_ENABLED: "true"
+      EVIDENCE_STORAGE_PATH: /app/data/evidence
+    volumes:
+      - ./data/evidence:/app/data/evidence
+    depends_on:
+      postgres:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
