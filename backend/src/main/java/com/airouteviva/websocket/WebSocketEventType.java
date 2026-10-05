@@ -1,0 +1,15 @@
+package com.airouteviva.websocket;
+
+public enum WebSocketEventType {
+    RESOURCE_UPDATE,
+    AI_REQUEST_CREATED,
+    ROUTING_DECISION,
+    AI_REQUEST_STARTED,
+    AI_REQUEST_COMPLETED,
+    PROCTORING_EVENT,
+    TRANSCRIPT_UPDATE,
+    ANSWER_EVALUATION,
+    CACHE_HIT,
+    FALLBACK_ACTIVATED,
+    VIVA_COMPLETED
+}
